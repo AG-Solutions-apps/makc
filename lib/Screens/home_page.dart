@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:installed_apps/installed_apps.dart';
+
 import 'package:makc/Controller/controller.dart';
 import 'package:makc/Model/banner_model.dart';
 import 'package:makc/Model/profile_model.dart';
@@ -20,37 +20,86 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Controller controller = Get.put(Controller());
-  PageController pageController = PageController(viewportFraction: 0.85);
+  PageController pageController = PageController(viewportFraction: 1.0);
   RxInt currentPage = 0.obs;
   Timer? timer;
+  bool isLoaded = false;
+  final Set<String> _selectedServiceIds = {};
+  bool _isRequestSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    controller.getLoginToken().then((value) {
-      // Fetch profile data first to get user name
-      ApiHelper.apiHelper.fetchProfile(token: controller.isLoginToken.value).then((profile) {
-        controller.profileData.value = ProfileModel.fromJson(profile["data"]);
-      });
-      
-      ApiHelper.apiHelper.fetchServiceBanner(token: controller.isLoginToken.value).then((banner) {
-        ApiHelper.apiHelper.fetchService(token: controller.isLoginToken.value).then((service) {
-          List filterList = banner["data"];
-          List serviceFilterList = service["data"];
-          controller.bannerList.value = filterList.map((e) => BannerDataModel.fromJson(e)).toList();
-          controller.imagePath.value = "${banner["image_url"][1]["image_url"]}";
-          controller.noImagePath.value = "${banner["image_url"][0]["image_url"]}";
-          controller.serviceList.value = serviceFilterList.map((e) => ServiceDataModel.fromJson(e)).toList();
+    controller.getLoginToken().then((value) async {
+      try {
+        // Fetch profile data first to get user name and allowed services
+        var profile = await ApiHelper.apiHelper.fetchProfile(token: controller.isLoginToken.value);
+        if (profile != null && profile["data"] != null) {
+          controller.profileData.value = ProfileModel.fromJson(profile["data"]);
+        }
+
+        // Fetch banners and services
+        var banner = await ApiHelper.apiHelper.fetchServiceBanner(token: controller.isLoginToken.value);
+        var service = await ApiHelper.apiHelper.fetchService(token: controller.isLoginToken.value);
+
+        String servicesString = controller.profileData.value.services ?? "";
+        String cleanedServices = servicesString
+            .replaceAll('[', '')
+            .replaceAll(']', '')
+            .replaceAll('{', '')
+            .replaceAll('}', '')
+            .replaceAll('"', '')
+            .replaceAll("'", '');
+
+        List<String> allowedServiceIds = cleanedServices
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty && e.toLowerCase() != "null")
+            .toList();
+
+        if (service != null) {
+          List serviceFilterList = service["data"] ?? [];
+          List<ServiceDataModel> allServices = serviceFilterList.map((e) => ServiceDataModel.fromJson(e)).toList();
+
+          if (allowedServiceIds.isNotEmpty) {
+            controller.serviceList.value = allServices.where((s) {
+              String logoName = s.serviceLogo ?? "";
+              String id = logoName.contains('_') ? logoName.split('_')[0] : "";
+              return allowedServiceIds.contains(id);
+            }).toList();
+          } else {
+            controller.serviceList.value = [];
+          }
           controller.serviceImagePath.value = "${service["image_url"][1]["image_url"]}";
           controller.serviceNOImagePath.value = "${service["image_url"][0]["image_url"]}";
-        });
-      });
-    });
-    startAutoSlide();
-    
-    // Add listener for page changes
-    pageController.addListener(() {
-      currentPage.value = pageController.page?.round() ?? 0;
+        } else {
+          controller.serviceList.value = [];
+        }
+
+        if (banner != null) {
+          List filterList = banner["data"] ?? [];
+          List<BannerDataModel> allBanners = filterList.map((e) => BannerDataModel.fromJson(e)).toList();
+
+          // Banners are always shown in full for all users, regardless of their allowed services
+          controller.bannerList.value = allBanners;
+
+          controller.imagePath.value = "${banner["image_url"][1]["image_url"]}";
+          controller.noImagePath.value = "${banner["image_url"][0]["image_url"]}";
+        } else {
+          controller.bannerList.value = [];
+        }
+
+        // Fetch service requests
+        await controller.getServiceRequestList();
+      } catch (e) {
+        print("Error loading home page data: $e");
+      } finally {
+        if (mounted) {
+          setState(() {
+            isLoaded = true;
+          });
+        }
+      }
     });
   }
 
@@ -70,16 +119,19 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> checkApp({required String packageName, required String url}) async {
-    bool? isInstalled = await InstalledApps.isAppInstalled(packageName);
-    if (isInstalled!) {
-      InstalledApps.startApp(packageName);
-    } else {
-      if (!await launchUrl(Uri.parse(url))) {
-        throw Exception('Could not launch ${Uri.parse(url)}');
-      }
-    }
+ Future<void> checkApp({
+  required String packageName,
+  required String url,
+}) async {
+  final Uri uri = Uri.parse(url);
+
+  if (!await launchUrl(
+    uri,
+    mode: LaunchMode.externalApplication,
+  )) {
+    throw Exception('Could not launch $url');
   }
+}
 
   String getPackageName(String url) {
     Uri uri = Uri.parse(url);
@@ -229,6 +281,29 @@ class _HomePageState extends State<HomePage> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          const Spacer(),
+                          if (controller.serviceList.length == 1 || controller.serviceList.length == 2)
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                foregroundColor: const Color(0xff2D3290),
+                                backgroundColor: const Color(0xff2D3290).withOpacity(0.08),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                                _showServiceRequestDialog(context);
+                              },
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text(
+                                "Request Service",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -252,7 +327,183 @@ class _HomePageState extends State<HomePage> {
                               return _buildServiceCard(index);
                             },
                           )
-                        : _buildShimmerGrid(),
+                        : (isLoaded
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Text(
+                                        "No services assigned.",
+                                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xff2D3290),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          elevation: 2,
+                                        ),
+                                        onPressed: () {
+                                          _showServiceRequestDialog(context);
+                                        },
+                                        icon: const Icon(Icons.add_circle_outline, size: 18),
+                                        label: const Text(
+                                          "Request for Service",
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : _buildShimmerGrid()),
+
+                    // Service Requests Section (if any requests exist)
+                    Obx(() {
+                      if (controller.serviceRequestList.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 24),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xff2D3290), Color(0xff4B4FC9)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  "My Service Requests",
+                                  style: TextStyle(
+                                    color: Color(0xff2D3290),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: controller.serviceRequestList.length,
+                            itemBuilder: (context, index) {
+                              final request = controller.serviceRequestList[index];
+                              final status = request["services_request_status"] ?? "Pending";
+                              final statusColor = _getStatusColor(status);
+                              final dateStr = request["services_request_date"] ?? "";
+                              final serviceName = request["service_name"] ?? "";
+                              final logoName = request["service_logo"] ?? "";
+                              final logoUrl = "${controller.serviceRequestImagePath.value}$logoName";
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.06),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                  border: Border.all(color: Colors.grey.shade100),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Row(
+                                    children: [
+                                      // Service Logo
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xff2D3290).withOpacity(0.06),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: logoName.isNotEmpty
+                                            ? Image.network(
+                                                logoUrl,
+                                                width: 32,
+                                                height: 32,
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return const Icon(Icons.build, color: Color(0xff2D3290), size: 20);
+                                                },
+                                              )
+                                            : const Icon(Icons.build, color: Color(0xff2D3290), size: 20),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      // Service Name & Date
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              serviceName,
+                                              style: const TextStyle(
+                                                color: Color(0xff2D3290),
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "Requested: $dateStr",
+                                              style: TextStyle(
+                                                color: Colors.grey.shade500,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Status Badge
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: statusColor.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          status,
+                                          style: TextStyle(
+                                            color: statusColor,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      );
+                    }),
                     
                     const SizedBox(height: 24),
                     
@@ -286,90 +537,57 @@ class _HomePageState extends State<HomePage> {
                     
                     const SizedBox(height: 16),
                     
-                    // Banner Carousel
                     controller.bannerList.isNotEmpty
-                        ? SizedBox(
-                            height: screenWidth / 2.2,
-                            child: Stack(
-                              children: [
-                                PageView.builder(
-                                  controller: pageController,
-                                  itemCount: controller.bannerList.length,
-                                  onPageChanged: (index) {
-                                    currentPage.value = index;
+                        ? ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: controller.bannerList.length,
+                            itemBuilder: (context, index) {
+                              final banner = controller.bannerList[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    final link = banner.serviceSubLink;
+                                    if (link != null && link.toString().trim().isNotEmpty) {
+                                      _launchBannerLink(link.toString());
+                                    }
                                   },
-                                  itemBuilder: (context, index) {
-                                    return AnimatedBuilder(
-                                      animation: pageController,
-                                      builder: (context, child) {
-                                        double value = 0.0;
-                                        if (pageController.position.haveDimensions) {
-                                          value = (pageController.page! - index).abs();
-                                          value = (1 - (value * 0.2)).clamp(0.8, 1.0);
-                                        }
-                                        return Transform.scale(
-                                          scale: value,
-                                          child: Container(
-                                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(20),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withOpacity(0.1),
-                                                  blurRadius: 10,
-                                                  offset: const Offset(0, 5),
-                                                ),
-                                              ],
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(20),
-                                              child: Image.network(
-                                                "${controller.imagePath.value}${controller.bannerList[index].serviceSubBanner}",
-                                                fit: BoxFit.cover,
-                                                width: double.infinity,
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Container(
-                                                    color: Colors.grey.shade200,
-                                                    child: const Center(
-                                                      child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
-                                // Page Indicator Dots
-                                Positioned(
-                                  bottom: 10,
-                                  left: 0,
-                                  right: 0,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: List.generate(
-                                      controller.bannerList.length,
-                                      (index) => Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                                        width: currentPage.value == index ? 24 : 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(4),
-                                          color: currentPage.value == index
-                                              ? const Color(0xff2D3290)
-                                              : Colors.grey.shade300,
+                                  child: Container(
+                                    height: screenWidth / 2.2,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.08),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
                                         ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Image.network(
+                                        "${controller.imagePath.value}${banner.serviceSubBanner}",
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            color: Colors.grey.shade200,
+                                            child: const Center(
+                                              child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              );
+                            },
                           )
-                        : _buildShimmerBanner(),
+                        : (isLoaded ? const SizedBox.shrink() : _buildShimmerBanner()),
                     
                     const SizedBox(height: 30),
                   ],
@@ -505,4 +723,311 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Future<Map<String, List<dynamic>>> _fetchRequestDetails() async {
+    try {
+      final activeResponse = await ApiHelper.apiHelper.fetchActiveServicesForRequest(
+        token: controller.isLoginToken.value,
+      );
+      final requestListResponse = await ApiHelper.apiHelper.fetchServiceRequestList(
+        token: controller.isLoginToken.value,
+      );
+
+      List<dynamic> activeServices = [];
+      List<dynamic> requestedServices = [];
+
+      if (activeResponse != null && activeResponse["data"] != null) {
+        activeServices = activeResponse["data"] as List<dynamic>;
+      }
+      if (requestListResponse != null && requestListResponse["data"] != null) {
+        requestedServices = requestListResponse["data"] as List<dynamic>;
+      }
+
+      return {
+        "active": activeServices,
+        "requested": requestedServices,
+      };
+    } catch (e) {
+      print("Error fetching request details: $e");
+    }
+    return {"active": [], "requested": []};
+  }
+
+  void _showServiceRequestDialog(BuildContext context) {
+    _selectedServiceIds.clear();
+    _isRequestSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(25),
+                  topRight: Radius.circular(25),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                top: 20,
+                left: 20,
+                right: 20,
+              ),
+              child: FutureBuilder<Map<String, List<dynamic>>>(
+                future: _fetchRequestDetails(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox(
+                      height: 250,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xff2D3290),
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError || snapshot.data == null) {
+                    return SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: Text(
+                          "Failed to load services.",
+                          style: TextStyle(color: Colors.red.shade400),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final data = snapshot.data!;
+                  final activeServices = data["active"] ?? [];
+                  final requestedServices = data["requested"] ?? [];
+
+                  if (activeServices.isEmpty) {
+                    return SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.info_outline, size: 48, color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            Text(
+                              "No services available for request.",
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  // Parse requested service IDs
+                  final requestedIds = requestedServices
+                      .map((r) => (r["service_id"] ?? r["id"] ?? "").toString())
+                      .toSet();
+
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Request Service",
+                            style: TextStyle(
+                              color: Color(0xff2D3290),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Select the services you would like to request:",
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      ),
+                      const SizedBox(height: 16),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.4,
+                        ),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: activeServices.length,
+                          itemBuilder: (context, index) {
+                            final service = activeServices[index];
+                            final serviceId = (service["id"] ?? service["service_id"] ?? "").toString();
+                            final serviceName = service["service_name"] ?? "";
+                            final isAlreadyRequested = requestedIds.contains(serviceId);
+                            final isChecked = isAlreadyRequested || _selectedServiceIds.contains(serviceId);
+
+                            return CheckboxListTile(
+                              activeColor: const Color(0xff2D3290),
+                              title: Text(
+                                serviceName,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              subtitle: isAlreadyRequested
+                                  ? const Text(
+                                      "Already Requested (Pending)",
+                                      style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500),
+                                    )
+                                  : null,
+                              value: isChecked,
+                              onChanged: isAlreadyRequested
+                                  ? null
+                                  : (bool? value) {
+                                      setSheetState(() {
+                                        if (value == true) {
+                                          _selectedServiceIds.add(serviceId);
+                                        } else {
+                                          _selectedServiceIds.remove(serviceId);
+                                        }
+                                      });
+                                    },
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xff2D3290),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: _isRequestSubmitting || _selectedServiceIds.isEmpty
+                              ? null
+                              : () async {
+                                  setSheetState(() {
+                                    _isRequestSubmitting = true;
+                                  });
+
+                                  bool allSuccess = true;
+                                  String? successMessage;
+                                  String? errorMessage;
+
+                                  for (final serviceId in _selectedServiceIds) {
+                                    final response = await ApiHelper.apiHelper.addServiceRequest(
+                                      token: controller.isLoginToken.value,
+                                      serviceIds: serviceId,
+                                    );
+                                    if (response != null && response["code"] == 200) {
+                                      successMessage = response["message"];
+                                    } else {
+                                      allSuccess = false;
+                                      errorMessage = response?["message"] ?? "Failed to submit request.";
+                                    }
+                                  }
+
+                                  // Refresh request list
+                                  await controller.getServiceRequestList();
+
+                                  if (allSuccess) {
+                                    if (!context.mounted) return;
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(successMessage ?? "Service request(s) submitted successfully!"),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  } else {
+                                    setSheetState(() {
+                                      _isRequestSubmitting = false;
+                                    });
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(errorMessage ?? "Failed to submit request."),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                },
+                          child: _isRequestSubmitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  "Submit Request",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case "approved":
+      case "active":
+      case "completed":
+        return Colors.green;
+      case "rejected":
+      case "cancelled":
+        return Colors.red;
+      case "pending":
+      default:
+        return Colors.orange;
+    }
+  }
+
+  Future<void> _launchBannerLink(String? url) async {
+  if (url == null || url.trim().isEmpty) return;
+
+  String formattedUrl = url.trim();
+
+  if (!formattedUrl.startsWith('http')) {
+    formattedUrl = 'https://$formattedUrl';
+  }
+
+  final uri = Uri.tryParse(formattedUrl);
+
+  if (uri == null || uri.host.isEmpty || !uri.host.contains('.')) {
+    print("Invalid URL: $formattedUrl");
+    return;
+  }
+
+  await launchUrl(
+    uri,
+    mode: LaunchMode.externalApplication,
+  );
+}
 }

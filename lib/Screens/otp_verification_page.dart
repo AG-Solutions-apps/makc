@@ -1,0 +1,420 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:makc/Model/company_model.dart';
+import 'package:makc/Utils/api_helper.dart';
+import 'package:makc/Utils/loader.dart';
+import 'package:makc/Utils/shared_pref.dart';
+import 'bottom_page.dart';
+
+class OtpVerificationPage extends StatefulWidget {
+  final String verificationId;
+  final String mobile;
+  final bool isSignup;
+  final String signupName;
+  final String signupEmail;
+  final String loginPassword;
+
+  const OtpVerificationPage({
+    super.key,
+    required this.verificationId,
+    required this.mobile,
+    required this.isSignup,
+    this.signupName = "",
+    this.signupEmail = "",
+    this.loginPassword = "",
+  });
+
+  @override
+  State<OtpVerificationPage> createState() => _OtpVerificationPageState();
+}
+
+class _OtpVerificationPageState extends State<OtpVerificationPage> {
+  final TextEditingController _txtOtp = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final FocusNode _focusNode = FocusNode();
+  
+  late String _currentVerificationId;
+  int _secondsRemaining = 60;
+  Timer? _timer;
+  bool _canResend = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentVerificationId = widget.verificationId;
+    
+    // Add listeners to update the 6-square UI dynamically
+    _txtOtp.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _focusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+    
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _secondsRemaining = 60;
+    _canResend = false;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          if (_secondsRemaining > 0) {
+            _secondsRemaining--;
+          } else {
+            _canResend = true;
+            _timer?.cancel();
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _txtOtp.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _resendOtp() async {
+    if (!_canResend) return;
+    
+    setState(() => _isLoading = true);
+
+    String formattedMobile = widget.mobile.trim();
+    if (!formattedMobile.startsWith("+")) formattedMobile = "+91$formattedMobile";
+
+    try {
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: formattedMobile,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await FirebaseAuth.instance.signInWithCredential(credential);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? "Resend failed. Try again."), backgroundColor: Colors.red));
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          if (!mounted) return;
+          setState(() {
+            _currentVerificationId = verificationId;
+            _isLoading = false;
+          });
+          _startTimer();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("OTP has been resent successfully."), backgroundColor: Colors.green));
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
+        timeout: const Duration(seconds: 60),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _verifyAndProceed() async {
+    if (!_formKey.currentState!.validate()) {
+      if (_txtOtp.text.length < 6) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter all 6 digits of the OTP."), backgroundColor: Colors.red));
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    Loader.showLoader(context, "Verifying OTP...");
+
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: _currentVerificationId,
+        smsCode: _txtOtp.text.trim(),
+      );
+      
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (widget.isSignup) {
+        _handleSignupFlow();
+      } else {
+        _handleLoginFlow(widget.loginPassword);
+      }
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      Loader.hideLoader(context);
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? "Invalid OTP code. Please try again."), backgroundColor: Colors.red));
+    } catch (e) {
+      if (!mounted) return;
+      Loader.hideLoader(context);
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _handleSignupFlow() async {
+    // Signup implementation logic...
+    try {
+      final signupResponse = await ApiHelper.apiHelper.signUp(
+        name: widget.signupName, email: widget.signupEmail, mobile: widget.mobile,
+      );
+
+      if (signupResponse != null && signupResponse["code"] == 200) {
+        final checkMobileResponse = await ApiHelper.apiHelper.checkMobile(mobile: widget.mobile);
+
+        if (checkMobileResponse != null && checkMobileResponse["code"] == 200) {
+          final autoPassword = checkMobileResponse["data"];
+          _handleLoginFlow(autoPassword);
+        } else {
+          if (!mounted) return;
+          Loader.hideLoader(context);
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(checkMobileResponse?["message"] ?? "Failed to fetch password after signup."), backgroundColor: Colors.orange));
+        }
+      } else {
+        if (!mounted) return;
+        Loader.hideLoader(context);
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(signupResponse?["message"] ?? "Registration failed."), backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Loader.hideLoader(context);
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Signup Error: $e"), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _handleLoginFlow(String password) async {
+    try {
+      final loginResponse = await ApiHelper.apiHelper.getLogin(
+        mobile: widget.mobile, password: password, deviceID: "121dfsfddsfsf",
+      );
+
+      if (!mounted) return;
+      Loader.hideLoader(context);
+      setState(() => _isLoading = false);
+
+      if (loginResponse != null && loginResponse["code"] == 200) {
+        List companyImageList = loginResponse["image_url"];
+        CompanyDataModel company = CompanyDataModel.fromJson(loginResponse["company"]);
+        String token = loginResponse["data"]["token"];
+
+        await SharedPref.saveCompanyData(company);
+        await SharedPref.saveImagePath(companyImageList[0]["image_url"]);
+        await SharedPref.saveNoImagePath(companyImageList[1]["image_url"]);
+        await SharedPref.saveLogin(true);
+        await SharedPref.saveLoginToken(token);
+
+        if (!mounted) return;
+        Get.offAll(() => const BottomPage(), transition: Transition.fadeIn);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(loginResponse["message"] ?? "Logged in successfully", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.green, duration: const Duration(seconds: 2)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(loginResponse?["message"] ?? "Login failed."), backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Loader.hideLoader(context);
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Login Error: $e"), backgroundColor: Colors.red));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String otpText = _txtOtp.text;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF02040A), 
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+                padding: const EdgeInsets.only(left: 24, right: 24, top: 40, bottom: 40),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF060B15), 
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFF1C3E8A).withOpacity(0.9), 
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF1C3E8A).withOpacity(0.55), 
+                      blurRadius: 60,
+                      spreadRadius: 15,
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFF0056FF).withOpacity(0.3), 
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "OTP Verification",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "We have sent a verification code to your phone number +91 ${widget.mobile}",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14, height: 1.4),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // 6-Square OTP Input UI WITH GLOW
+                    SizedBox(
+                      height: 60,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(6, (index) {
+                              bool isFocused = _focusNode.hasFocus && (otpText.length == index || (otpText.length == 6 && index == 5));
+                              
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                height: 55,
+                                width: 45,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F1522),
+                                  border: Border.all(
+                                    color: isFocused ? const Color(0xFF0056FF) : const Color(0xFF1E253A),
+                                    width: isFocused ? 1.5 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                  
+                                  // INDIVIDUAL SQUARE GLOW EFFECT
+                                  boxShadow: isFocused 
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF0056FF).withOpacity(0.5),
+                                            blurRadius: 15,
+                                            spreadRadius: 2,
+                                          )
+                                        ] 
+                                      : [],
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  index < otpText.length ? otpText[index] : "",
+                                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                ),
+                              );
+                            }),
+                          ),
+                          
+                          TextFormField(
+                            controller: _txtOtp,
+                            focusNode: _focusNode,
+                            keyboardType: TextInputType.number,
+                            cursorColor: Colors.transparent, 
+                            style: const TextStyle(color: Colors.transparent, fontSize: 1), 
+                            autofocus: true,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                              fillColor: Colors.transparent,
+                              filled: true,
+                            ),
+                            validator: (value) {
+                              if (value == null || value.length < 6) return ""; 
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 35),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _canResend ? "Didn't receive code? " : "Resend code in ${_secondsRemaining}s",
+                          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                        ),
+                        if (_canResend)
+                          GestureDetector(
+                            onTap: _isLoading ? null : _resendOtp,
+                            child: const Text("Resend OTP", style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 14)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+
+                    Container(
+                      height: 54,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0061FF), Color(0xFF0044CC)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _verifyAndProceed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text("Verify & Proceed", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                            if (_isLoading) ...[
+                              const SizedBox(width: 12),
+                              const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            ]
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

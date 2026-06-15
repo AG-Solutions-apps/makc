@@ -36,6 +36,91 @@ class ApiHelper{
     }
   }
 
+  Future checkMobile({required String mobile}) async {
+    try {
+      var data = FormData.fromMap({
+        "mobile": mobile,
+      });
+
+      Response response = await dio.post(ApiConst.checkMobile, data: data);
+      if (response.statusCode == 200) {
+        return {
+          "code": response.data["code"],
+          "message": response.data["message"],
+          "data": response.data["data"],
+          "company": response.data["company"] ?? response.data["company_detils"],
+          "image_url": response.data["image_url"],
+        };
+      }
+    } on DioException catch (dioError) {
+      if (dioError.response != null) {
+        return {
+          "code": dioError.response!.data["code"] ?? dioError.response!.statusCode ?? 400,
+          "message": dioError.response!.data["message"] ?? "Error occurred",
+          "company": dioError.response!.data["company"] ?? dioError.response!.data["company_detils"],
+          "image_url": dioError.response!.data["image_url"],
+        };
+      }
+      return {
+        "code": 500,
+        "message": dioError.message ?? "Connection timeout",
+      };
+    } catch (error) {
+      print("CheckMobile Error: $error");
+      return {
+        "code": 500,
+        "message": error.toString(),
+      };
+    }
+  }
+
+  Future signUp({
+    required String name,
+    required String email,
+    required String mobile,
+  }) async {
+    try {
+      var data = FormData.fromMap({
+        "r_id": "",
+        "name": name,
+        "email": email,
+        "mobile": mobile,
+        "whatsapp": "",
+        "area": "",
+        "description": "",
+        "relation": "",
+        "services": "",
+        "hide_services": "",
+        "password": "",
+      });
+
+      Response response = await dio.post(ApiConst.signup, data: data);
+      if (response.statusCode == 200) {
+        return {
+          "code": response.data["code"],
+          "message": response.data["message"],
+        };
+      }
+    } on DioException catch (dioError) {
+      if (dioError.response != null) {
+        return {
+          "code": dioError.response!.data["code"] ?? dioError.response!.statusCode ?? 400,
+          "message": dioError.response!.data["message"] ?? "Signup failed",
+        };
+      }
+      return {
+        "code": 500,
+        "message": dioError.message ?? "Connection timeout",
+      };
+    } catch (error) {
+      print("Signup Error: $error");
+      return {
+        "code": 500,
+        "message": error.toString(),
+      };
+    }
+  }
+
   Future fetchServiceBanner({required String token})
   async{
     try{
@@ -276,5 +361,78 @@ class ApiHelper{
     }
   }
 
+  Future fetchActiveServicesForRequest({required String token}) async {
+    try {
+      var headers = {
+        "Authorization": "Bearer $token"
+      };
 
+      Response response = await dio.get(
+        ApiConst.activeServicesForRequest,
+        options: Options(headers: headers),
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          "code": response.statusCode,
+          "data": response.data["data"],
+        };
+      }
+    } catch (error) {
+      print("fetchActiveServicesForRequest Error: $error");
+    }
+    return null;
+  }
+
+  Future fetchServiceRequestList({required String token}) async {
+    try {
+      var headers = {
+        "Authorization": "Bearer $token"
+      };
+
+      Response response = await dio.get(
+        ApiConst.fetchServiceRequestList,
+        options: Options(headers: headers),
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          "code": response.statusCode,
+          "data": response.data["data"],
+          "image_url": response.data["image_url"]
+        };
+      }
+    } catch (error) {
+      print("fetchServiceRequestList Error: $error");
+    }
+    return null;
+  }
+
+  Future addServiceRequest({required String token, required String serviceIds}) async {
+    try {
+      var headers = {
+        "Authorization": "Bearer $token"
+      };
+
+      var data = FormData.fromMap({
+        "service_id": serviceIds,
+      });
+
+      Response response = await dio.post(
+        ApiConst.addServiceRequest,
+        data: data,
+        options: Options(headers: headers),
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          "code": response.data["code"],
+          "message": response.data["message"],
+        };
+      }
+    } catch (error) {
+      print("addServiceRequest Error: $error");
+    }
+    return null;
+  }
 }

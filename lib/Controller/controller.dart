@@ -38,6 +38,9 @@ class Controller extends GetxController{
   RxString noCompanyImage = "".obs;
   RxString companyImage = "".obs;
   RxBool imageLoader = false.obs;
+  
+  RxList<dynamic> serviceRequestList = <dynamic>[].obs;
+  RxString serviceRequestImagePath = "".obs;
 
   Future<bool> getLogin()
   async{
@@ -80,8 +83,17 @@ class Controller extends GetxController{
     imageLoader.value = true;
   }
 
-
-
-
-
+  Future getServiceRequestList() async {
+    try {
+      final response = await ApiHelper.apiHelper.fetchServiceRequestList(token: isLoginToken.value);
+      if (response != null) {
+        serviceRequestList.value = response["data"] ?? [];
+        if (response["image_url"] != null && response["image_url"].length > 1) {
+          serviceRequestImagePath.value = response["image_url"][1]["image_url"] ?? "";
+        }
+      }
+    } catch (e) {
+      print("getServiceRequestList Error: $e");
+    }
+  }
 }

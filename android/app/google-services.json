@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "983848821035",
+    "project_id": "makc-auto",
+    "storage_bucket": "makc-auto.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:983848821035:android:9934fc5bb91cd60ca2656e",
+        "android_client_info": {
+          "package_name": "com.makc.agsolutions"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSG58X1CRs1X_Sj8PdhFOX6jANYQdnJEk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
