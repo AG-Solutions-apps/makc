@@ -435,4 +435,33 @@ class ApiHelper{
     }
     return null;
   }
+
+Future appLogout({required String token}) async {
+  try {
+    var headers = {
+      "Authorization": "Bearer $token",
+      "Accept": "application/json",
+    };
+
+    Response response = await dio.post(
+      "https://agsdemo.in/macapi/public/api/app-logout",
+      options: Options(headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      return {
+        "code": response.data["code"],
+        "message": response.data["message"],
+      };
+    }
+  } catch (error) {
+    print("Logout Error: $error");
+
+    return {
+      "code": 500,
+      "message": error.toString(),
+    };
+  }
+}
+
 }

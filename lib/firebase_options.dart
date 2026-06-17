@@ -56,7 +56,6 @@ class DefaultFirebaseOptions {
     projectId: 'makc-auto',
     storageBucket: 'makc-auto.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBGVGKTwsRCoFEs_enPEbZsUC6fQP6SgLU',
     appId: '1:983848821035:ios:a7e1e1a5e94e0d4fa2656e',
@@ -65,7 +64,6 @@ class DefaultFirebaseOptions {
     storageBucket: 'makc-auto.firebasestorage.app',
     iosBundleId: 'com.makc.agsolutions',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBGVGKTwsRCoFEs_enPEbZsUC6fQP6SgLU',
     appId: '1:983848821035:ios:30edc77a6a39302aa2656e',

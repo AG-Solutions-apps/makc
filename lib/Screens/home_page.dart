@@ -157,12 +157,13 @@ class _HomePageState extends State<HomePage> {
             // Custom Header with User Greeting
             SliverToBoxAdapter(
               child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 5),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                     colors: [
+                      Color(0xff1E2265),
                       Color(0xff2D3290),
                       Color(0xff4B4FC9),
                     ],
@@ -180,12 +181,9 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
+                          
                           child: const Icon(
-                            Icons.person_outline,
+                            Icons.arrow_back_ios_new,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -243,7 +241,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -282,12 +280,12 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           const Spacer(),
-                          if (controller.serviceList.length == 1 || controller.serviceList.length == 2)
+                          
                             TextButton.icon(
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 foregroundColor: const Color(0xff2D3290),
-                                backgroundColor: const Color(0xff2D3290).withOpacity(0.08),
+                                backgroundColor: const Color.fromARGB(255, 42, 49, 181).withOpacity(0.20),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -1010,24 +1008,23 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _launchBannerLink(String? url) async {
-  if (url == null || url.trim().isEmpty) return;
-
-  String formattedUrl = url.trim();
-
-  if (!formattedUrl.startsWith('http')) {
-    formattedUrl = 'https://$formattedUrl';
+    if (url == null || url.trim().isEmpty) return;
+    String formattedUrl = url.trim();
+    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+      formattedUrl = "https://$formattedUrl";
+    }
+    final Uri uri = Uri.parse(formattedUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        print("Could not launch $formattedUrl");
+      }
+    } catch (e) {
+      print("Error launching banner URL: $e");
+    }
   }
-
-  final uri = Uri.tryParse(formattedUrl);
-
-  if (uri == null || uri.host.isEmpty || !uri.host.contains('.')) {
-    print("Invalid URL: $formattedUrl");
-    return;
-  }
-
-  await launchUrl(
-    uri,
-    mode: LaunchMode.externalApplication,
-  );
-}
 }

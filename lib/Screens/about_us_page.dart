@@ -86,88 +86,87 @@ class _AboutUsPageState extends State<AboutUsPage> {
         slivers: [
           // Attractive App Bar with Gradient and Animation
           SliverAppBar(
-            expandedHeight: 120,
-            floating: false,
-            pinned: true,
-            backgroundColor: const Color(0xff2D3290),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => controller.bottomIndex.value = 0,
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text(
-                "About Us",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
+              expandedHeight: 77,
+              pinned: true,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
                 ),
               ),
-              centerTitle: true,
-              background: Container(
+
+              flexibleSpace: Container(
                 decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
                   gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                     colors: [
+                      Color(0xff1E2265),
                       Color(0xff2D3290),
                       Color(0xff4B4FC9),
-                      Color(0xff6B6FDC),
                     ],
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: () => controller.bottomIndex.value = 0,
+                        ),
+
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              "My Profile",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(
+                          width: 48, // balances the back button
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
           // Main Content
           SliverToBoxAdapter(
             child: Obx(
               () => Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.all(10.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // --- Logo Section without Shadow ---
                     _buildLogoSection(screenWidth),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 1),
 
                     // --- Company Name with Gradient Text ---
-                    ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [Color(0xff2D3290), Color(0xff4B4FC9)],
-                      ).createShader(bounds),
-                      child: Text(
-                        controller.companyData.value.companyName ?? "MAKC Automations",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
                     
-                    // Decorative Divider
-                    Container(
-                      width: 50,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xff2D3290), Color(0xff6B6FDC)],
-                        ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
 
-                    const SizedBox(height: 32),
 
                     // --- Contact Cards (Phone, Email, Website, Address) ---
                     // Phone Card

@@ -37,37 +37,65 @@ class _ComplaintPageState extends State<ComplaintPage> {
         child: CustomScrollView(
           slivers: [
             // Attractive App Bar
-            SliverAppBar(
-              expandedHeight: 100,
-              floating: false,
+          SliverAppBar(
+              expandedHeight: 77,
               pinned: true,
-              backgroundColor: const Color(0xff2D3290),
-              foregroundColor: Colors.white,
+              backgroundColor: Colors.transparent,
               elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                onPressed: () => controller.bottomIndex.value = 0,
+
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
               ),
-              flexibleSpace: FlexibleSpaceBar(
-                title: const Text(
-                  "Complaints",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
+
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xff1E2265),
+                      Color(0xff2D3290),
+                      Color(0xff4B4FC9),
+                    ],
                   ),
                 ),
-                centerTitle: true,
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xff2D3290),
-                        Color(0xff4B4FC9),
-                        Color(0xff6B6FDC),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: () => controller.bottomIndex.value = 0,
+                        ),
+
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              "Requests / Complaints",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(
+                          width: 48, // balances the back button
+                        ),
                       ],
                     ),
                   ),
@@ -98,7 +126,7 @@ class _ComplaintPageState extends State<ComplaintPage> {
                               const Icon(Icons.error_outline, color: Colors.white, size: 16),
                               const SizedBox(width: 6),
                               const Text(
-                                "Your Complaints",
+                                "History",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -177,7 +205,7 @@ class _ComplaintPageState extends State<ComplaintPage> {
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Text(
-                                "Raise a Complaint",
+                                "Raise a Request / Complaint",
                                 style: TextStyle(
                                   color: Color(0xff2D3290),
                                   fontWeight: FontWeight.w600,
@@ -201,15 +229,15 @@ class _ComplaintPageState extends State<ComplaintPage> {
                         const SizedBox(height: 20),
                         _buildDialogTextField(
                           controller: controller.txtComplaintSubject,
-                          label: "Complaint Subject",
-                          hint: "Enter the complaint subject",
+                          label: "Request / Complaint Subject",
+                          hint: "Enter the request/complaint subject",
                           icon: Icons.title,
                         ),
                         const SizedBox(height: 16),
                         _buildDialogTextField(
                           controller: controller.txtComplaintDescription,
-                          label: "Complaint Description",
-                          hint: "Enter the complaint description",
+                          label: "Request / Complaint Description",
+                          hint: "Enter the request/complaint description",
                           icon: Icons.description,
                           maxLines: 4,
                         ),
@@ -296,7 +324,7 @@ class _ComplaintPageState extends State<ComplaintPage> {
             Icon(Icons.add, color: Colors.white, size: 18),
             SizedBox(width: 6),
             Text(
-              "New Complaint",
+              "Add new",
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
@@ -664,7 +692,7 @@ class _ComplaintPageState extends State<ComplaintPage> {
           ),
           const SizedBox(height: 20),
           Text(
-            "No Complaints Yet",
+            "No Requests / Complaints Yet",
             style: TextStyle(
               color: Colors.grey.shade600,
               fontSize: 18,
@@ -673,7 +701,7 @@ class _ComplaintPageState extends State<ComplaintPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Tap the 'New Complaint' button to raise a complaint",
+            "Tap the 'New Request /New Complaint' button to raise a Request/Complaint",
             style: TextStyle(
               color: Colors.grey.shade400,
               fontSize: 13,

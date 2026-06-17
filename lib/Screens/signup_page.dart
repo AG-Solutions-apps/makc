@@ -116,10 +116,9 @@ class _SignupPageState extends State<SignupPage> {
       }
 
       await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: formattedMobile,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          await FirebaseAuth.instance.signInWithCredential(credential);
-        },
+       verificationCompleted: (PhoneAuthCredential credential) async {
+  print("AUTO VERIFICATION TRIGGERED - SIGNUP");
+},
         verificationFailed: (FirebaseAuthException e) {
           if (!mounted) return;
           Loader.hideLoader(context);

@@ -109,8 +109,8 @@ class _LoginPageState extends State<LoginPage> {
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: formattedMobile,
         verificationCompleted: (PhoneAuthCredential credential) async {
-          await FirebaseAuth.instance.signInWithCredential(credential);
-        },
+  print("AUTO VERIFICATION TRIGGERED - LOGIN");
+},
         verificationFailed: (FirebaseAuthException e) {
           if (!mounted) return;
           Loader.hideLoader(context);
@@ -177,12 +177,12 @@ class _LoginPageState extends State<LoginPage> {
                   color: const Color(0xFF060B15),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: const Color(0xFF1C3E8A).withOpacity(0.9), 
+                    color: const Color.fromARGB(255, 28, 62, 138).withOpacity(0.9), 
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1C3E8A).withOpacity(0.55), 
+                      color: const Color(0xFF031B50).withOpacity(0.55), 
                       blurRadius: 60,
                       spreadRadius: 15,
                     ),

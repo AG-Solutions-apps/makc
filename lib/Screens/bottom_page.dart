@@ -53,8 +53,8 @@ class _BottomPageState extends State<BottomPage> {
               children: [
                 SvgPicture.asset(
                   icon,
-                  height: Get.width / 18,
-                  width: Get.width / 18,
+                  height: Get.width / 21,
+                  width: Get.width / 21,
                   color: isSelected
                       ? const Color.fromARGB(255, 45, 50, 144)
                       : Colors.white,
@@ -64,7 +64,7 @@ class _BottomPageState extends State<BottomPage> {
                   title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     color: isSelected
                         ? const Color.fromARGB(255, 45, 50, 144)
                         : Colors.white,
@@ -93,11 +93,11 @@ class _BottomPageState extends State<BottomPage> {
             : AboutUsPage(),
       ),
       bottomNavigationBar: Container(
-        height: Get.width / 5,
+        height: Get.width / 6,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [Color.fromARGB(255, 45, 50, 144), Color(0xff4B4FC9)],
           ),
           borderRadius: BorderRadius.only(
@@ -106,7 +106,7 @@ class _BottomPageState extends State<BottomPage> {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(6.0),
           child: Obx(
             () => Row(
               children: [
@@ -135,7 +135,7 @@ class _BottomPageState extends State<BottomPage> {
                   child: bottomItem(
                     index: 3,
                     icon: "assets/bottom/about.svg",
-                    title: "About Us",
+                    title: "About",
                   ),
                 ),
               ],

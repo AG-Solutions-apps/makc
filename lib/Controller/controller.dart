@@ -96,4 +96,32 @@ class Controller extends GetxController{
       print("getServiceRequestList Error: $e");
     }
   }
+
+  /// Combined method for logout - clears all data and token
+  Future<void> performLogout() async {
+    try {
+      // Clear token and login state in SharedPreferences
+      await SharedPref.clearToken();
+      
+      // Reset controller variables
+      isLogin.value = false;
+      isLoginToken.value = "";
+      profileData.value = ProfileModel();
+      familyMemberList.clear();
+      complaintList.clear();
+      serviceRequestList.clear();
+      
+      // Clear all text controllers
+      txtFullName.clear();
+      txtMobile.clear();
+      txtEmail.clear();
+      txtRelation.clear();
+      txtComplaintSubject.clear();
+      txtComplaintDescription.clear();
+      
+      print('Logout performed successfully');
+    } catch (e) {
+      print('Error during logout: $e');
+    }
+  }
 }

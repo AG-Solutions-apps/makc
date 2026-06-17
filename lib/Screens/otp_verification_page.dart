@@ -8,6 +8,18 @@ import 'package:makc/Utils/api_helper.dart';
 import 'package:makc/Utils/loader.dart';
 import 'package:makc/Utils/shared_pref.dart';
 import 'bottom_page.dart';
+import 'package:uuid/uuid.dart';
+
+Future<String> getOrCreateDeviceId() async {
+  String? deviceId = await SharedPref.getDeviceId();
+
+  if (deviceId == null || deviceId.isEmpty) {
+    deviceId = const Uuid().v4();
+    await SharedPref.saveDeviceId(deviceId);
+  }
+
+  return deviceId;
+}
 
 class OtpVerificationPage extends StatefulWidget {
   final String verificationId;
@@ -43,20 +55,35 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   bool _isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    _currentVerificationId = widget.verificationId;
-    
-    // Add listeners to update the 6-square UI dynamically
-    _txtOtp.addListener(() {
-      if (mounted) setState(() {});
-    });
-    _focusNode.addListener(() {
-      if (mounted) setState(() {});
-    });
-    
-    _startTimer();
-  }
+  @override
+void initState() {
+  super.initState();
+
+  _currentVerificationId = widget.verificationId;
+
+  print("================================");
+  print("OTP SCREEN OPENED");
+  print("VerificationId: ${widget.verificationId}");
+  print("CurrentVerificationId: $_currentVerificationId");
+  print("Mobile: ${widget.mobile}");
+  print("Is Signup: ${widget.isSignup}");
+  print("================================");
+
+  // Add listeners to update the 6-square UI dynamically
+  _txtOtp.addListener(() {
+    if (mounted) {
+      setState(() {});
+    }
+  });
+
+  _focusNode.addListener(() {
+    if (mounted) {
+      setState(() {});
+    }
+  });
+
+  _startTimer();
+}
 
   void _startTimer() {
     _secondsRemaining = 60;
@@ -123,42 +150,81 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   }
 
   Future<void> _verifyAndProceed() async {
-    if (!_formKey.currentState!.validate()) {
-      if (_txtOtp.text.length < 6) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter all 6 digits of the OTP."), backgroundColor: Colors.red));
-      }
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    Loader.showLoader(context, "Verifying OTP...");
-
-    try {
-      final credential = PhoneAuthProvider.credential(
-        verificationId: _currentVerificationId,
-        smsCode: _txtOtp.text.trim(),
+  if (!_formKey.currentState!.validate()) {
+    if (_txtOtp.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter all 6 digits of the OTP."),
+          backgroundColor: Colors.red,
+        ),
       );
-      
-      await FirebaseAuth.instance.signInWithCredential(credential);
-
-      if (widget.isSignup) {
-        _handleSignupFlow();
-      } else {
-        _handleLoginFlow(widget.loginPassword);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      Loader.hideLoader(context);
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? "Invalid OTP code. Please try again."), backgroundColor: Colors.red));
-    } catch (e) {
-      if (!mounted) return;
-      Loader.hideLoader(context);
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
     }
+    return;
   }
 
+  setState(() => _isLoading = true);
+  Loader.showLoader(context, "Verifying OTP...");
+
+  try {
+    print("================================");
+    print("VERIFY BUTTON CLICKED");
+    print("VerificationId: $_currentVerificationId");
+    print("Entered OTP: ${_txtOtp.text.trim()}");
+    print("================================");
+
+    final credential = PhoneAuthProvider.credential(
+      verificationId: _currentVerificationId,
+      smsCode: _txtOtp.text.trim(),
+    );
+
+    await FirebaseAuth.instance.signInWithCredential(credential);
+
+    print("OTP VERIFIED SUCCESSFULLY");
+
+    if (widget.isSignup) {
+      await _handleSignupFlow();
+    } else {
+      await _handleLoginFlow(widget.loginPassword);
+    }
+  } on FirebaseAuthException catch (e) {
+    print("================================");
+    print("FIREBASE OTP ERROR");
+    print("Code: ${e.code}");
+    print("Message: ${e.message}");
+    print("VerificationId: $_currentVerificationId");
+    print("OTP: ${_txtOtp.text.trim()}");
+    print("================================");
+
+    if (!mounted) return;
+
+    Loader.hideLoader(context);
+    setState(() => _isLoading = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "Code: ${e.code}\n${e.message}",
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 10),
+      ),
+    );
+  } catch (e) {
+    print("GENERAL ERROR: $e");
+
+    if (!mounted) return;
+
+    Loader.hideLoader(context);
+    setState(() => _isLoading = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error: $e"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
   Future<void> _handleSignupFlow() async {
     // Signup implementation logic...
     try {
@@ -192,11 +258,26 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     }
   }
 
+
+Future<String> getOrCreateDeviceId() async {
+  String? deviceId = await SharedPref.getDeviceId();
+
+  if (deviceId == null || deviceId.isEmpty) {
+    deviceId = const Uuid().v4();
+    await SharedPref.saveDeviceId(deviceId);
+  }
+
+  return deviceId;
+}
   Future<void> _handleLoginFlow(String password) async {
     try {
-      final loginResponse = await ApiHelper.apiHelper.getLogin(
-        mobile: widget.mobile, password: password, deviceID: "121dfsfddsfsf",
-      );
+     String deviceId = await getOrCreateDeviceId();
+
+final loginResponse = await ApiHelper.apiHelper.getLogin(
+  mobile: widget.mobile,
+  password: password,
+  deviceID: deviceId,
+);
 
       if (!mounted) return;
       Loader.hideLoader(context);
