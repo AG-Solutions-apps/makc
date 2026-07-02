@@ -108,9 +108,9 @@ class _AboutUsPageState extends State<AboutUsPage> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xff1E2265),
-                      Color(0xff2D3290),
-                      Color(0xff4B4FC9),
+                      Color(0xFF020B24), // Midnight Navy
+                      Color(0xFF0A2A7D), // Cobalt/Royal Blue
+                      Color.fromARGB(255, 1, 111, 207), // Electric Neon Blue
                     ],
                   ),
                 ),
@@ -131,7 +131,7 @@ class _AboutUsPageState extends State<AboutUsPage> {
                         const Expanded(
                           child: Center(
                             child: Text(
-                              "My Profile",
+                              "About Us",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -164,9 +164,7 @@ class _AboutUsPageState extends State<AboutUsPage> {
 
                     const SizedBox(height: 1),
 
-                    // --- Company Name with Gradient Text ---
-                    
-
+                     const SizedBox(height: 15),
 
                     // --- Contact Cards (Phone, Email, Website, Address) ---
                     // Phone Card
@@ -199,8 +197,21 @@ class _AboutUsPageState extends State<AboutUsPage> {
                     _buildContactCard(
                       icon: "assets/profile/website.svg",
                       title: "Website",
-                      value: "https://makcautomations.com/",
-                      onTap: () => _openWebsite("https://makcautomations.com/"),
+                      value: (() {
+                        final websiteUrl = controller.companyData.value.companyWebsite ?? "https://makcautomations.com/";
+                        if (websiteUrl.toLowerCase().contains("makc")) {
+                          return "makcautomations.com";
+                        }
+                        String clean = websiteUrl
+                            .replaceAll("https://", "")
+                            .replaceAll("http://", "")
+                            .replaceAll("www.", "");
+                        if (clean.endsWith("/")) {
+                          clean = clean.substring(0, clean.length - 1);
+                        }
+                        return clean.isEmpty ? "makcautomations.com" : clean;
+                      })(),
+                      onTap: () => _openWebsite(controller.companyData.value.companyWebsite ?? "https://makcautomations.com/"),
                       isClickable: true,
                       customIcon: Icons.language,
                     ),

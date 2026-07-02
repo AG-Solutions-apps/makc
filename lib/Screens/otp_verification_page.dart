@@ -55,35 +55,33 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   bool _isLoading = false;
 
   @override
-  @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
 
-  _currentVerificationId = widget.verificationId;
+    _currentVerificationId = widget.verificationId;
 
-  print("================================");
-  print("OTP SCREEN OPENED");
-  print("VerificationId: ${widget.verificationId}");
-  print("CurrentVerificationId: $_currentVerificationId");
-  print("Mobile: ${widget.mobile}");
-  print("Is Signup: ${widget.isSignup}");
-  print("================================");
+    print("================================");
+    print("OTP SCREEN OPENED");
+    print("VerificationId: ${widget.verificationId}");
+    print("CurrentVerificationId: $_currentVerificationId");
+    print("Mobile: ${widget.mobile}");
+    print("Is Signup: ${widget.isSignup}");
+    print("================================");
 
-  // Add listeners to update the 6-square UI dynamically
-  _txtOtp.addListener(() {
-    if (mounted) {
-      setState(() {});
-    }
-  });
+    _txtOtp.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
 
-  _focusNode.addListener(() {
-    if (mounted) {
-      setState(() {});
-    }
-  });
+    _focusNode.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
 
-  _startTimer();
-}
+    _startTimer();
+  }
 
   void _startTimer() {
     _secondsRemaining = 60;
@@ -150,164 +148,363 @@ void initState() {
   }
 
   Future<void> _verifyAndProceed() async {
-  if (!_formKey.currentState!.validate()) {
-    if (_txtOtp.text.length < 6) {
+    if (!_formKey.currentState!.validate()) {
+      if (_txtOtp.text.length < 6) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Please enter all 6 digits of the OTP."),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    Loader.showLoader(context, "Verifying OTP...");
+
+    try {
+      print("================================");
+      print("VERIFY BUTTON CLICKED");
+      print("VerificationId: $_currentVerificationId");
+      print("Entered OTP: ${_txtOtp.text.trim()}");
+      print("================================");
+
+      final credential = PhoneAuthProvider.credential(
+        verificationId: _currentVerificationId,
+        smsCode: _txtOtp.text.trim(),
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      print("OTP VERIFIED SUCCESSFULLY");
+
+      if (widget.isSignup) {
+        await _handleSignupFlow();
+      } else {
+        await _handleLoginFlow(widget.loginPassword);
+      }
+    } on FirebaseAuthException catch (e) {
+      print("================================");
+      print("FIREBASE OTP ERROR");
+      print("Code: ${e.code}");
+      print("Message: ${e.message}");
+      print("VerificationId: $_currentVerificationId");
+      print("OTP: ${_txtOtp.text.trim()}");
+      print("================================");
+
+      if (!mounted) return;
+
+      Loader.hideLoader(context);
+      setState(() => _isLoading = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please enter all 6 digits of the OTP."),
+        SnackBar(
+          content: Text(
+            "Code: ${e.code}\n${e.message}",
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 10),
+        ),
+      );
+    } catch (e) {
+      print("GENERAL ERROR: $e");
+
+      if (!mounted) return;
+
+      Loader.hideLoader(context);
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
           backgroundColor: Colors.red,
         ),
       );
     }
-    return;
   }
 
-  setState(() => _isLoading = true);
-  Loader.showLoader(context, "Verifying OTP...");
-
-  try {
-    print("================================");
-    print("VERIFY BUTTON CLICKED");
-    print("VerificationId: $_currentVerificationId");
-    print("Entered OTP: ${_txtOtp.text.trim()}");
-    print("================================");
-
-    final credential = PhoneAuthProvider.credential(
-      verificationId: _currentVerificationId,
-      smsCode: _txtOtp.text.trim(),
-    );
-
-    await FirebaseAuth.instance.signInWithCredential(credential);
-
-    print("OTP VERIFIED SUCCESSFULLY");
-
-    if (widget.isSignup) {
-      await _handleSignupFlow();
-    } else {
-      await _handleLoginFlow(widget.loginPassword);
-    }
-  } on FirebaseAuthException catch (e) {
-    print("================================");
-    print("FIREBASE OTP ERROR");
-    print("Code: ${e.code}");
-    print("Message: ${e.message}");
-    print("VerificationId: $_currentVerificationId");
-    print("OTP: ${_txtOtp.text.trim()}");
-    print("================================");
-
-    if (!mounted) return;
-
-    Loader.hideLoader(context);
-    setState(() => _isLoading = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "Code: ${e.code}\n${e.message}",
-        ),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 10),
-      ),
-    );
-  } catch (e) {
-    print("GENERAL ERROR: $e");
-
-    if (!mounted) return;
-
-    Loader.hideLoader(context);
-    setState(() => _isLoading = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Error: $e"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-}
   Future<void> _handleSignupFlow() async {
-    // Signup implementation logic...
     try {
+      print("=== SIGNUP FLOW START ===");
+
       final signupResponse = await ApiHelper.apiHelper.signUp(
-        name: widget.signupName, email: widget.signupEmail, mobile: widget.mobile,
+        name: widget.signupName, 
+        email: widget.signupEmail, 
+        mobile: widget.mobile,
       );
 
-      if (signupResponse != null && signupResponse["code"] == 200) {
-        final checkMobileResponse = await ApiHelper.apiHelper.checkMobile(mobile: widget.mobile);
+      print("SignupResponse: $signupResponse");
+      print("SignupResponse type: ${signupResponse.runtimeType}");
 
-        if (checkMobileResponse != null && checkMobileResponse["code"] == 200) {
-          final autoPassword = checkMobileResponse["data"];
-          _handleLoginFlow(autoPassword);
+      if (signupResponse == null) {
+        if (!mounted) return;
+        Loader.hideLoader(context);
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Signup failed: no response"), backgroundColor: Colors.red));
+        return;
+      }
+
+      // Check if it's a Map
+      if (signupResponse is! Map) {
+        print("ERROR: signupResponse is not a Map! Type: ${signupResponse.runtimeType}");
+        if (!mounted) return;
+        Loader.hideLoader(context);
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Invalid server response format"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final signupCode = signupResponse["code"];
+      print("Signup code: $signupCode (type: ${signupCode.runtimeType})");
+
+      if (signupCode == 200 || signupCode.toString() == "200") {
+        print("Signup SUCCESS - fetching mobile check...");
+
+        final checkMobileResponse = await ApiHelper.apiHelper.checkMobile(mobile: widget.mobile);
+        print("CheckMobileResponse: $checkMobileResponse");
+
+        if (checkMobileResponse == null) {
+          if (!mounted) return;
+          Loader.hideLoader(context);
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not fetch login credentials."), backgroundColor: Colors.orange));
+          return;
+        }
+
+        if (checkMobileResponse is! Map) {
+          print("ERROR: checkMobileResponse is not a Map!");
+          if (!mounted) return;
+          Loader.hideLoader(context);
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Invalid server response format"),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        final checkCode = checkMobileResponse["code"];
+        print("CheckMobile code: $checkCode (type: ${checkCode.runtimeType})");
+
+        if (checkCode == 200 || checkCode.toString() == "200") {
+          final rawData = checkMobileResponse["data"];
+          final String autoPassword = rawData?.toString() ?? "";
+          print("AutoPassword: $autoPassword");
+
+          await _handleLoginFlow(autoPassword);
         } else {
           if (!mounted) return;
           Loader.hideLoader(context);
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(checkMobileResponse?["message"] ?? "Failed to fetch password after signup."), backgroundColor: Colors.orange));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(checkMobileResponse["message"]?.toString() ?? "Failed to fetch credentials."),
+              backgroundColor: Colors.orange
+            )
+          );
         }
       } else {
         if (!mounted) return;
         Loader.hideLoader(context);
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(signupResponse?["message"] ?? "Registration failed."), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(signupResponse["message"]?.toString() ?? "Registration failed."),
+            backgroundColor: Colors.red
+          )
+        );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print("=== SIGNUP FLOW ERROR ===");
+      print("Error: $e");
+      print("StackTrace: $stackTrace");
       if (!mounted) return;
       Loader.hideLoader(context);
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Signup Error: $e"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Signup Error: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-
-Future<String> getOrCreateDeviceId() async {
-  String? deviceId = await SharedPref.getDeviceId();
-
-  if (deviceId == null || deviceId.isEmpty) {
-    deviceId = const Uuid().v4();
-    await SharedPref.saveDeviceId(deviceId);
-  }
-
-  return deviceId;
-}
   Future<void> _handleLoginFlow(String password) async {
     try {
-     String deviceId = await getOrCreateDeviceId();
+      print("=== LOGIN FLOW START ===");
+      print("Mobile: ${widget.mobile}, Password: $password");
 
-final loginResponse = await ApiHelper.apiHelper.getLogin(
-  mobile: widget.mobile,
-  password: password,
-  deviceID: deviceId,
-);
+      String deviceId = await getOrCreateDeviceId();
+      print("DeviceId: $deviceId");
+
+      final loginResponse = await ApiHelper.apiHelper.getLogin(
+        mobile: widget.mobile,
+        password: password,
+        deviceID: deviceId,
+      );
+
+      print("LoginResponse: $loginResponse");
+      print("LoginResponse type: ${loginResponse.runtimeType}");
 
       if (!mounted) return;
       Loader.hideLoader(context);
       setState(() => _isLoading = false);
 
-      if (loginResponse != null && loginResponse["code"] == 200) {
-        List companyImageList = loginResponse["image_url"];
-        CompanyDataModel company = CompanyDataModel.fromJson(loginResponse["company"]);
-        String token = loginResponse["data"]["token"];
+      if (loginResponse == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Login failed: no response"), backgroundColor: Colors.red));
+        return;
+      }
+
+      if (loginResponse is! Map) {
+        print("ERROR: loginResponse is not a Map!");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Invalid server response format"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final loginCode = loginResponse["code"];
+      print("Login code: $loginCode (type: ${loginCode.runtimeType})");
+
+      if (loginCode == 200 || loginCode.toString() == "200") {
+        // SAFELY HANDLE companyImageList
+        dynamic imageData = loginResponse["image_url"];
+        List companyImageList = [];
+        
+        if (imageData is List) {
+          companyImageList = imageData;
+        } else if (imageData != null) {
+          companyImageList = [imageData];
+        }
+        
+        print("CompanyImageList: $companyImageList");
+        print("CompanyImageList type: ${companyImageList.runtimeType}");
+
+        // Safely build CompanyDataModel
+        final companyRaw = loginResponse["company"];
+        print("Company raw: $companyRaw (type: ${companyRaw.runtimeType})");
+        
+        CompanyDataModel company;
+        try {
+          if (companyRaw is Map<String, dynamic>) {
+            company = CompanyDataModel.fromJson(companyRaw);
+          } else if (companyRaw is Map) {
+            company = CompanyDataModel.fromJson(Map<String, dynamic>.from(companyRaw));
+          } else if (companyRaw is List && companyRaw.isNotEmpty) {
+            company = CompanyDataModel.fromJson(Map<String, dynamic>.from(companyRaw[0]));
+          } else {
+            company = CompanyDataModel();
+          }
+        } catch (e) {
+          print("Error parsing company: $e");
+          company = CompanyDataModel();
+        }
+
+        // Safely extract token
+        String token = "";
+        dynamic dataField = loginResponse["data"];
+        print("Data field: $dataField (type: ${dataField.runtimeType})");
+        
+        try {
+          if (dataField is Map) {
+            token = dataField["token"]?.toString() ?? "";
+          } else if (dataField is List && dataField.isNotEmpty) {
+            final first = dataField[0];
+            if (first is Map) {
+              token = first["token"]?.toString() ?? "";
+            } else {
+              token = first?.toString() ?? "";
+            }
+          } else if (dataField is String) {
+            token = dataField;
+          }
+        } catch (e) {
+          print("Error extracting token: $e");
+          token = "";
+        }
+
+        print("Final token: $token");
 
         await SharedPref.saveCompanyData(company);
-        await SharedPref.saveImagePath(companyImageList[0]["image_url"]);
-        await SharedPref.saveNoImagePath(companyImageList[1]["image_url"]);
+        
+        // SAFELY SAVE IMAGE PATHS - FIXED
+        try {
+          if (companyImageList.isNotEmpty) {
+            var firstImage = companyImageList[0];
+            if (firstImage is Map) {
+              // If it's a Map, get the image_url
+              await SharedPref.saveImagePath(firstImage["image_url"]?.toString() ?? "");
+            } else if (firstImage is String) {
+              // If it's directly a string URL
+              await SharedPref.saveImagePath(firstImage);
+            } else {
+              print("First image is neither Map nor String: ${firstImage.runtimeType}");
+            }
+          }
+          
+          if (companyImageList.length > 1) {
+            var secondImage = companyImageList[1];
+            if (secondImage is Map) {
+              await SharedPref.saveNoImagePath(secondImage["image_url"]?.toString() ?? "");
+            } else if (secondImage is String) {
+              await SharedPref.saveNoImagePath(secondImage);
+            } else {
+              print("Second image is neither Map nor String: ${secondImage.runtimeType}");
+            }
+          }
+        } catch (e) {
+          print("Error saving image paths: $e");
+        }
+        
         await SharedPref.saveLogin(true);
         await SharedPref.saveLoginToken(token);
 
         if (!mounted) return;
         Get.offAll(() => const BottomPage(), transition: Transition.fadeIn);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(loginResponse["message"] ?? "Logged in successfully", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.green, duration: const Duration(seconds: 2)),
+          SnackBar(
+            content: Text(
+              loginResponse["message"]?.toString() ?? "Logged in successfully",
+              style: const TextStyle(color: Colors.white)
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(loginResponse?["message"] ?? "Login failed."), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loginResponse["message"]?.toString() ?? "Login failed."),
+            backgroundColor: Colors.red
+          )
+        );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print("=== LOGIN FLOW ERROR ===");
+      print("Error: $e");
+      print("StackTrace: $stackTrace");
       if (!mounted) return;
       Loader.hideLoader(context);
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Login Error: $e"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Login Error: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -392,8 +589,6 @@ final loginResponse = await ApiHelper.apiHelper.getLogin(
                                     width: isFocused ? 1.5 : 1,
                                   ),
                                   borderRadius: BorderRadius.circular(10),
-                                  
-                                  // INDIVIDUAL SQUARE GLOW EFFECT
                                   boxShadow: isFocused 
                                       ? [
                                           BoxShadow(

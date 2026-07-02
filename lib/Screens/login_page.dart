@@ -199,13 +199,13 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     Center(
                       child: Container(
-                        height: Get.width / 1.9,
-                        width: Get.width / 1.5,
+                        height: Get.width / 2.9,
+                        width: Get.width / 1.8,
                         decoration: const BoxDecoration(color: Colors.transparent),
                         child: Image.asset("assets/mac.png", fit: BoxFit.contain),
                       ),
                     ),
-                  
+                 
                     const Text(
                       "Sign in to your account",
                       textAlign: TextAlign.center,
@@ -217,7 +217,7 @@ class _LoginPageState extends State<LoginPage> {
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
                     ),
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 65),
                     const Text(
                       "Mobile Number",
                       style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 13, fontWeight: FontWeight.w600),

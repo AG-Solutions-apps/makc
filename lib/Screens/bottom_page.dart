@@ -98,7 +98,11 @@ class _BottomPageState extends State<BottomPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color.fromARGB(255, 45, 50, 144), Color(0xff4B4FC9)],
+            colors: [
+              Color(0xFF020B24), // Midnight Navy
+              Color(0xFF0A2A7D), // Cobalt/Royal Blue
+              Color.fromARGB(255, 1, 111, 207), // Electric Neon Blue
+            ],
           ),
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(30),
