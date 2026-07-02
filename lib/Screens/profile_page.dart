@@ -74,9 +74,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xff1E2265),
-                      Color(0xff2D3290),
-                      Color(0xff4B4FC9),
+                      Color(0xFF020B24), // Midnight Navy
+                      Color(0xFF0A2A7D), // Cobalt/Royal Blue
+                      Color.fromARGB(255, 1, 111, 207), // Electric Neon Blue
                     ],
                   ),
                 ),
@@ -170,38 +170,42 @@ class _ProfilePageState extends State<ProfilePage> {
                             "Not Specified",
                       ),
 
-                      const SizedBox(height: 32),
+                      if (controller.profileData.value.services != null &&
+                          controller.profileData.value.services!.isNotEmpty &&
+                          controller.profileData.value.services!.trim().toLowerCase() != "null") ...[
+                        const SizedBox(height: 32),
 
-                      // Family Members Section Header
-                      Row(
-                        children: [
-                          const Text(
-                            "Family Members",
-                            style: TextStyle(
-                              color: Color(0xff1E2265),
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.2,
+                        // Family Members Section Header
+                        Row(
+                          children: [
+                            const Text(
+                              "Family Members",
+                              style: TextStyle(
+                                color: Color(0xff1E2265),
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.2,
+                              ),
                             ),
-                          ),
-                          const Spacer(),
-                          _buildAddButton(),
-                        ],
-                      ),
+                            const Spacer(),
+                            _buildAddButton(),
+                          ],
+                        ),
 
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      // Family Members List
-                      controller.familyMemberList.isNotEmpty
-                          ? ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: controller.familyMemberList.length,
-                              itemBuilder: (context, index) {
-                                return _buildFamilyMemberCard(index);
-                              },
-                            )
-                          : _buildEmptyState(),
+                        // Family Members List
+                        controller.familyMemberList.isNotEmpty
+                            ? ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: controller.familyMemberList.length,
+                                itemBuilder: (context, index) {
+                                  return _buildFamilyMemberCard(index);
+                                },
+                              )
+                            : _buildEmptyState(),
+                      ],
 
                       const SizedBox(height: 30),
 
@@ -520,6 +524,34 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // Add Family Member Button
   Widget _buildAddButton() {
+    final String? services = controller.profileData.value.services;
+    final bool hasNoServices = services == null || services.isEmpty || services.trim().toLowerCase() == "null";
+
+    if (hasNoServices) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add_circle_outline, color: Colors.grey.shade600, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              "Add Member",
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return InkWell(
       onTap: () {
         controller.txtFullName.clear();

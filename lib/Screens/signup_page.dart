@@ -116,7 +116,8 @@ class _SignupPageState extends State<SignupPage> {
       }
 
       await FirebaseAuth.instance.verifyPhoneNumber(
-       verificationCompleted: (PhoneAuthCredential credential) async {
+        phoneNumber: formattedMobile,
+        verificationCompleted: (PhoneAuthCredential credential) async {
   print("AUTO VERIFICATION TRIGGERED - SIGNUP");
 },
         verificationFailed: (FirebaseAuthException e) {
@@ -293,8 +294,8 @@ class _SignupPageState extends State<SignupPage> {
                     
                     Center(
                       child: Container(
-                         height: Get.width / 1.9,
-                        width: Get.width / 1.5,
+                         height: Get.width / 3.5,
+                        width: Get.width / 1.8,
                         decoration: const BoxDecoration(color: Colors.transparent),
                         child: Image.asset("assets/mac.png", fit: BoxFit.contain),
                       ),

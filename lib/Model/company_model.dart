@@ -18,6 +18,7 @@ class CompanyDataModel {
   String? companyMobileNo;
   dynamic companyAddress;
   String? companyLogo;
+  String? companyWebsite;
   dynamic companyBanner;
   String? companyStatus;
   dynamic createdBy;
@@ -35,6 +36,7 @@ class CompanyDataModel {
     this.companyMobileNo,
     this.companyAddress,
     this.companyLogo,
+    this.companyWebsite,
     this.companyBanner,
     this.companyStatus,
     this.createdBy,
@@ -53,6 +55,7 @@ class CompanyDataModel {
     String? companyMobileNo,
     dynamic companyAddress,
     String? companyLogo,
+    String? companyWebsite,
     dynamic companyBanner,
     String? companyStatus,
     dynamic createdBy,
@@ -70,6 +73,7 @@ class CompanyDataModel {
         companyMobileNo: companyMobileNo ?? this.companyMobileNo,
         companyAddress: companyAddress ?? this.companyAddress,
         companyLogo: companyLogo ?? this.companyLogo,
+        companyWebsite: companyWebsite ?? this.companyWebsite,
         companyBanner: companyBanner ?? this.companyBanner,
         companyStatus: companyStatus ?? this.companyStatus,
         createdBy: createdBy ?? this.createdBy,
@@ -88,6 +92,7 @@ class CompanyDataModel {
     companyMobileNo: json["company_mobile_no"],
     companyAddress: json["company_address"],
     companyLogo: json["company_logo"],
+    companyWebsite: json["company_website"],
     companyBanner: json["company_banner"],
     companyStatus: json["company_status"],
     createdBy: json["created_by"],
@@ -106,6 +111,7 @@ class CompanyDataModel {
     "company_mobile_no": companyMobileNo,
     "company_address": companyAddress,
     "company_logo": companyLogo,
+    "company_website": companyWebsite,
     "company_banner": companyBanner,
     "company_status": companyStatus,
     "created_by": createdBy,

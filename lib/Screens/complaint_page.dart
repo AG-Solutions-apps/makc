@@ -60,9 +60,9 @@ class _ComplaintPageState extends State<ComplaintPage> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xff1E2265),
-                      Color(0xff2D3290),
-                      Color(0xff4B4FC9),
+                      Color(0xFF020B24), // Midnight Navy
+                      Color(0xFF0A2A7D), // Cobalt/Royal Blue
+                      Color.fromARGB(255, 1, 111, 207), // Electric Neon Blue
                     ],
                   ),
                 ),
