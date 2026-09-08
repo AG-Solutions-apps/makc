@@ -147,20 +147,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Widget _buildSocialBtn(Widget icon) {
-    return Expanded(
-      child: Container(
-        height: 55,
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F1522),
-          border: Border.all(color: const Color(0xFF1E253A), width: 1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Center(child: icon),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

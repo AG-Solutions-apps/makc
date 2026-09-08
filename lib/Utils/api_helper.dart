@@ -674,7 +674,7 @@ class ApiHelper {
       };
 
       Response response = await dio.post(
-        "https://agsdemo.in/macapi/public/api/app-logout",
+        "https://makcautomations.com/crmapi/public/api/app-logout",
         options: Options(headers: headers),
       );
 

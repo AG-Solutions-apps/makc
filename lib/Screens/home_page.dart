@@ -28,7 +28,6 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = false;
   final Set<String> _selectedServiceIds = {};
   bool _isRequestSubmitting = false;
-  bool _showUpdateBar = false;
   
   // Cached request data - loaded once in initState
   Map<String, List<dynamic>>? _cachedRequestData;
@@ -44,9 +43,7 @@ class _HomePageState extends State<HomePage> {
   if (status == null) return;
 
   if (status.canUpdate && mounted) {
-    setState(() {
-      _showUpdateBar = true;
-    });
+    // Version update available
   }
 }
   @override

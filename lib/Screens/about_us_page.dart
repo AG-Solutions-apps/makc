@@ -325,11 +325,11 @@ class _AboutUsPageState extends State<AboutUsPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.business_center, size: 60, color: const Color(0xff2D3290).withOpacity(0.6)),
+          Icon(Icons.business_center, size: 60, color: const Color(0xff2D3290).withValues(alpha: 0.6)),
           const SizedBox(height: 8),
           Text(
             "Company Logo",
-            style: TextStyle(color: const Color(0xff2D3290).withOpacity(0.6)),
+            style: TextStyle(color: const Color(0xff2D3290).withValues(alpha: 0.6)),
           ),
         ],
       ),
@@ -350,8 +350,8 @@ class _AboutUsPageState extends State<AboutUsPage> {
       child: InkWell(
         onTap: isClickable ? onTap : null,
         borderRadius: BorderRadius.circular(15),
-        splashColor: isClickable ? const Color(0xff2D3290).withOpacity(0.1) : Colors.transparent,
-        highlightColor: isClickable ? const Color(0xff2D3290).withOpacity(0.05) : Colors.transparent,
+        splashColor: isClickable ? const Color(0xff2D3290).withValues(alpha: 0.1) : Colors.transparent,
+        highlightColor: isClickable ? const Color(0xff2D3290).withValues(alpha: 0.05) : Colors.transparent,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
@@ -365,7 +365,7 @@ class _AboutUsPageState extends State<AboutUsPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xff2D3290).withOpacity(0.08),
+                  color: const Color(0xff2D3290).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: customIcon != null
