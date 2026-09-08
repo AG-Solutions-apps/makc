@@ -55,9 +55,12 @@ class _BottomPageState extends State<BottomPage> {
                   icon,
                   height: Get.width / 21,
                   width: Get.width / 21,
-                  color: isSelected
-                      ? const Color.fromARGB(255, 45, 50, 144)
-                      : Colors.white,
+                  colorFilter: ColorFilter.mode(
+                    isSelected
+                        ? const Color.fromARGB(255, 45, 50, 144)
+                        : Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(

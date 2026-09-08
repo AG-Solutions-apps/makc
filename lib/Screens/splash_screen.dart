@@ -27,7 +27,6 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   bool _isInitializing = false;
   bool _hasNavigated = false;
   bool _videoStartedPlaying = false;
-  bool _isFirstPlayAttempt = true;
 
   @override
   void initState() {
@@ -83,7 +82,6 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     } else if (state == AppLifecycleState.inactive) {
       // App is going to background or call is active
       _isInCall = true;
-      _isFirstPlayAttempt = true;
       _updateVolume();
       debugPrint('📞 Call detected - video will be muted');
     }

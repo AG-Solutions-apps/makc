@@ -3,7 +3,7 @@ class ApiConst{
   ApiConst._();
   static ApiConst apiConst = ApiConst._();
 
-  static const String basUrl = "https://agsdemo.in/macapi/public/api/";
+  static const String basUrl = "https://makcautomations.com/crmapi/public/api/";
 
   static const String login = "${basUrl}login";
   static const String signup = "${basUrl}signup";
